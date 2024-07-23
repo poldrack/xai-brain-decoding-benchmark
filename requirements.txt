@@ -1,0 +1,16 @@
+poetry
+numpy == 1.26.4
+wandb
+captum
+ipykernel
+scipy
+pandas
+matplotlib
+seaborn
+jupyterlab  
+torch
+torchvision
+nilearn
+ray[tune]
+tensorboard
+torch_tb_profiler
