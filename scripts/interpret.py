@@ -42,7 +42,9 @@ def interpret(config: Dict=None) -> None:
     model_config = json.load(open(os.path.join(config['fitted_model_dir'], 'config.json')))
     assert config['task'] == model_config['task']
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device_name =  "cuda:0" if torch.cuda.is_available() else \
+        "mps" if torch.backends.mps.is_available() else "cpu"
+    device = torch.device(device_name)
 
     # setup LRP attribution
     composite_lrp_map = [
@@ -150,7 +152,7 @@ def interpret(config: Dict=None) -> None:
                     '/!\ Using random weight initializations for attribution'
                 )
             else:
-                if not torch.cuda.is_available():
+                if device_name == 'cpu':
                     model.load_state_dict(
                         torch.load(
                             model_path,
@@ -230,10 +232,10 @@ def interpret_w_method(
     image = torch.Tensor(image).to(torch.float)
     model.eval()
     
-    if torch.cuda.is_available():
+    if device_name != 'cpu':
         model.to(device)
 
-    if torch.cuda.is_available():
+    if device_name != 'cpu':
         image = image.to(device)
 
     image.requires_grad = True
@@ -241,7 +243,7 @@ def interpret_w_method(
     if name_attribution_method == 'LRP':
         grad_dummy = torch.eye(num_labels)[[label]]
 
-        if torch.cuda.is_available():
+        if device_name != 'cpu':
             grad_dummy = grad_dummy.to(device)
 
         with attribution_method.context(model) as modified_model:
@@ -265,7 +267,7 @@ def interpret_w_method(
 
         for b in baselines:
 
-            if torch.cuda.is_available():
+            if device_name != 'cpu':
                 b = b.to(device)
 
             attribution.append(
