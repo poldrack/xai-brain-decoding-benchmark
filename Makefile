@@ -10,16 +10,20 @@ similarity: results/brain_map_similarity
 faithfulness: results/faithfulness 
 sanity_checks: results/sanity_checks 
 
+setup-env:
+	micromamba create -f env.yml
+
+RESULTS_DIR = /Users/poldrack/data_unsynced/ray_storage
 # HYPEROPT 3D-CNN model configurations
-results/hyperopt: scripts/hyperopt.py scripts/identify-best-model-configuration.py
+results/hyperopt: scripts/hyperopt.py scripts/identify-best-model-config.py
 	# heat-rejection
 	poetry run python3 scripts/hyperopt.py \
 		--task heat-rejection \
 		--data-dir data/task-heat-rejection \
-		--log-dir results/hyperopt/task-heat-rejection
+		--log-dir $(RESULTS_DIR)/hyperopt/task-heat-rejection
 	poetry run python3 scripts/identify-best-model-configuration.py \
 		--task heat-rejection \
-		--hyperopt-dir results/hyperopt/task-heat-rejection
+		--hyperopt-dir $(RESULTS_DIR)/hyperopt/task-heat-rejection
 
 	# WM
 	poetry run python3 scripts/hyperopt.py \
