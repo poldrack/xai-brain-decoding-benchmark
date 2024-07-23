@@ -7,11 +7,13 @@ import numpy as np
 import pandas as pd
 import json
 import torch
-import wandb
-from ray import tune
+# import wandb
+# from ray import tune
 sys.path.append('./')
 import src
 
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter()
 
 def train(config: Dict=None) -> None:
     """Script's main function; trains 3D convolutional neural network."""
@@ -27,7 +29,8 @@ def train(config: Dict=None) -> None:
     assert config["report_to"] in [
         'none',
         'wandb',
-        'tune'
+        'tune',
+        'tensorboard'
     ], f'{config["report_to"]} is not a "report_to" value'
     
     os.makedirs(
@@ -169,6 +172,7 @@ def load_train_data(config: Dict):
     )
 
     if not os.path.isfile(train_test_split_path):
+        print('Creating train-test split...')
         subjects = np.unique(
             [
                 s.split('sub_')[1]
@@ -205,7 +209,7 @@ def load_train_data(config: Dict):
             json.dump(train_test_split, f, indent=2)
 
     else:
-
+        print(f'Loading train-test split from {train_test_split_path}...')
         with open(train_test_split_path, 'r') as f:
             train_test_split = json.load(f)
 
@@ -354,7 +358,7 @@ def train_run(
     validation_images = torch.Tensor(images[config["validation_idx"]]).to(torch.float)
     validation_labels = torch.Tensor(labels[config["validation_idx"]]).to(torch.long)
 
-    if 'cuda' in config['device']:    
+    if  config['device'] != 'cpu':    
         train_images = train_images.to(config['device'])
         train_labels = train_labels.to(config['device'])
         validation_images = validation_images.to(config['device'])
@@ -403,7 +407,7 @@ def train_run(
         dropout=config["dropout"]
     )
     
-    if 'cuda' in config['device']:
+    if config['device'] !='cpu':
         model.to(config['device'])
 
     xe_loss = torch.nn.CrossEntropyLoss()
@@ -496,7 +500,12 @@ def train_run(
                     'best_model.pt'
                 )
             )
-        
+        if config['report_to'] == 'tensorboard':
+            writer.add_scalar('Loss/train', train_history[-1]['loss'].values[0], epoch)
+            writer.add_scalar('Accuracy/train', train_history[-1]['accuracy'].values[0], epoch)
+            writer.add_scalar('Loss/eval', validation_history[-1]['loss'].values[0], epoch)
+            writer.add_scalar('Accuracy/eval', validation_history[-1]['accuracy'].values[0])
+
         if config["report_to"] == "wandb":
              wandb_run.log(
                 {
@@ -565,11 +574,10 @@ def get_train_argparse(parser: argparse.ArgumentParser=None) -> argparse.Argumen
     parser.add_argument(
         '--data-dir',
         metavar='DIR',
-        default='data/task-WM',
+        #default='data/task-WM',
         type=str,
-        required=False,
+        required=True,
         help='path where trial-level BOLD GLM maps are stored '
-             '(default: data/)'
     )
 
 
@@ -746,9 +754,9 @@ def get_train_argparse(parser: argparse.ArgumentParser=None) -> argparse.Argumen
         metavar='STR',
         default='none',
         type=str,
-        choices=('none', 'wandb', 'tune'),
+        choices=('none', 'wandb', 'tune', 'tensorboard'),
         required=False,
-        help='whether to report training results to wandb, tune or none '
+        help='whether to report training results to wandb, tune, tensorboard, or none '
              '(default: none)'
     )
     parser.add_argument(
@@ -844,7 +852,9 @@ def make_config(config: Dict=None):
     
     config["verbose"] = config["verbose"] == 'True'
     config["permute_labels"] = config["permute_labels"] == 'True'
-    config["device"] = "cuda:0" if torch.cuda.is_available() else "cpu"
+    config["device"] = "cuda:0" if torch.cuda.is_available() else \
+        "mps" if torch.backends.mps.is_available() else "cpu"
+    print(f'\n! Using device: {config["device"]}')
     config["smoke_test"] = config["smoke_test"] == 'True'
     
     if config["smoke_test"]:
