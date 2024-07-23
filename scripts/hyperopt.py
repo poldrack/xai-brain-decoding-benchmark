@@ -4,6 +4,7 @@ import os
 import argparse
 import ray
 import train
+from ray import tune
 
 
 def hyperopt() -> None:
@@ -27,7 +28,10 @@ def hyperopt() -> None:
         "num_folds": 3,
         "log_dir": hyperopt_config["log_dir"],
         "report_to": "tune",
-        "seed": hyperopt_config["seed"]
+        "seed": hyperopt_config["seed"],
+        "storage_path": os.path.join(
+            hyperopt_config["log_dir"],
+            'ray_results')
     }
 
     for k, v in train_config.items():
@@ -35,18 +39,13 @@ def hyperopt() -> None:
         if k not in config:
             config[k] = v
 
-    _ = ray.tune.run(
+    _ = tune.run(
         train.train,
         resources_per_trial={
             "cpu": hyperopt_config["cpus_per_trial"],
             "gpu": hyperopt_config["gpus_per_trial"]
         },
-        config=config,
-        local_dir=os.path.join(
-            hyperopt_config["log_dir"],
-            'ray_results'
-        ),
-    )
+        config=config)
 
     return None
 
