@@ -47,7 +47,7 @@ def interpret(config: Dict=None) -> None:
 
     device_name =  "cuda:0" if torch.cuda.is_available() else \
         "mps" if torch.backends.mps.is_available() else "cpu"
-    
+    print(f'Using device: {device_name}')
     device = None if device_name == 'cpu' else torch.device(device_name)
 
     # setup LRP attribution
