@@ -7,6 +7,9 @@ import json
 import numpy as np
 import nibabel as nb
 import nilearn as nl
+
+os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
+
 import torch
 from captum.attr import \
     DeepLift, \
@@ -44,7 +47,8 @@ def interpret(config: Dict=None) -> None:
 
     device_name =  "cuda:0" if torch.cuda.is_available() else \
         "mps" if torch.backends.mps.is_available() else "cpu"
-    device = torch.device(device_name)
+    
+    device = None if device_name == 'cpu' else torch.device(device_name)
 
     # setup LRP attribution
     composite_lrp_map = [
@@ -89,6 +93,8 @@ def interpret(config: Dict=None) -> None:
             if d.startswith('run-')
         ]
     )
+    print(f'fitting model dir: {config["fitted_model_dir"]}')
+    print('Fitting runs:', fitting_runs)
 
     if config['use_random_init']:
         fitting_runs = fitting_runs[0]
@@ -122,16 +128,17 @@ def interpret(config: Dict=None) -> None:
             'best_model.pt' if not config['interpret_final_model'] else 'final_model.pt'
         )
         attribution_methods = [
-            DeepLift,
-            DeepLiftShap,
-            GuidedBackprop,
-            GuidedGradCam,
-            InputXGradient,
+            # DeepLift,
+            # DeepLiftShap,
+            # GuidedBackprop,
+            # GuidedGradCam,
+            # InputXGradient,
             IntegratedGradients,
-            LRP,
-            Gradient,
-            SmoothGrad
+            # LRP,
+            # Gradient,
+            # SmoothGrad
         ]
+
 
         for attribution_method in attribution_methods:
             name_attribution_method = str(attribution_method.__name__)
@@ -149,10 +156,10 @@ def interpret(config: Dict=None) -> None:
 
             if config['use_random_init']:
                 print(
-                    '/!\ Using random weight initializations for attribution'
+                    'Using random weight initializations for attribution'
                 )
             else:
-                if device_name == 'cpu':
+                if device is None:
                     model.load_state_dict(
                         torch.load(
                             model_path,
@@ -191,7 +198,7 @@ def interpret(config: Dict=None) -> None:
                         label=label,
                         num_labels=num_labels,
                         test_images=test_images,
-                        device=device
+                        device_name=device_name
                     )
                     attribution_img = nl.image.new_img_like(
                         ref_niimg=nb.load(image_path),
@@ -220,22 +227,22 @@ def interpret_w_method(
     label,
     num_labels,
     test_images,
-    device: torch.device=torch.device('cpu')
+    device_name
     ):
     name_attribution_method = str(attribution_method.__name__)
     
     if label.ndim > 1:
         label = label.ravel()[0]
     
+    device = None if device_name == 'cpu' else torch.device(device_name)
+
     attribution = None
     label = int(label)
-    image = torch.Tensor(image).to(torch.float)
+    image = torch.Tensor(image.astype('float32')) # .to(torch.float)
     model.eval()
     
-    if device_name != 'cpu':
+    if device is not None:
         model.to(device)
-
-    if device_name != 'cpu':
         image = image.to(device)
 
     image.requires_grad = True
@@ -243,7 +250,7 @@ def interpret_w_method(
     if name_attribution_method == 'LRP':
         grad_dummy = torch.eye(num_labels)[[label]]
 
-        if device_name != 'cpu':
+        if device is not None:
             grad_dummy = grad_dummy.to(device)
 
         with attribution_method.context(model) as modified_model:
@@ -258,17 +265,23 @@ def interpret_w_method(
         'DeepLift',
         'IntegratedGradients'
     }:
+
         attributer = attribution_method(model)
         baselines = (
-            torch.zeros_like(image, device=device),
-            torch.tensor(test_images.mean(axis=0, keepdims=True), device=device).to(torch.float),
+            torch.zeros_like(image),
+            torch.tensor(test_images.mean(axis=0, keepdims=True).astype('float32')) # .to(torch.float32),
         )
         attribution = []
 
         for b in baselines:
 
-            if device_name != 'cpu':
+            if device is not None:
                 b = b.to(device)
+
+            if name_attribution_method == 'IntegratedGradients':
+                # convert inputs back to cpu
+                image = image.detach().cpu()
+                b = b.detach().cpu()
 
             attribution.append(
                 attributer.attribute(
@@ -291,7 +304,7 @@ def interpret_w_method(
         attribution = attributer.attribute(
             inputs=image,
             target=label,
-            baselines=torch.tensor(test_images[baselines_idx], device=device).to(torch.float)
+            baselines=torch.tensor(test_images[baselines_idx].astype('float32'), device=device) # .to(torch.float)
         )
 
     elif name_attribution_method == 'GuidedGradCam':
