@@ -11,51 +11,80 @@ faithfulness: results/faithfulness
 sanity_checks: results/sanity_checks 
 
 setup-env:
-	micromamba create -f env.yml
+	micromamba create -y -f env.yml
+	micromamba run -n xai pip install -r requirements.txt
 
-RESULTS_DIR = /tmp/ray_storage
-BASE_DIR = /data2/xai-brain-decoding-benchmark
-
-test:
+train-heat:
+	# heat-rejection
 	python3 scripts/train.py \
 		--task heat-rejection \
-		--data-dir /data2/xai-brain-decoding-benchmark/data/task-heat-rejection
+		--data-dir data/task-heat-rejection \
+		--num-runs 2 \
+		--num-folds 1 \
+		--model-config results/hyperopt/task-heat-rejection/best_model_config.json \
+		--run-group-name task-heat-rejection \
+		--log-dir results/models \
+		--report-to tensorboard
 
+train-wm:
+	# WM
+	python3 scripts/train.py \
+		--task WM \
+		--data-dir data/task-WM \
+		--num-runs 10 \
+		--num-folds 1 \
+		--model-config results/hyperopt/task-WM/best_model_config.json \
+		--run-group-name task-WM \
+		--log-dir results/models
+
+train-motor:
+	# MOTOR
+	python3 scripts/train.py \
+		--task MOTOR \
+		--data-dir data/task-MOTOR \
+		--num-runs 10 \
+		--num-folds 1 \
+		--model-config results/hyperopt/task-MOTOR/best_model_config.json \
+		--run-group-name task-MOTOR_final-model-fits \
+		--log-dir results/models
+
+
+RESULTS_DIR = /Users/poldrack/data_unsynced/ray_storage
 # HYPEROPT 3D-CNN model configurations
 results/hyperopt: scripts/hyperopt.py scripts/identify-best-model-config.py
 	# heat-rejection
-	# python3 scripts/hyperopt.py \
-	# 	--task heat-rejection \
-	# 	--data-dir /data2/xai-brain-decoding-benchmark/data/task-heat-rejection \
-	# 	--log-dir /tmp/ray_storage/hyperopt/task-heat-rejection
-	# python3 scripts/identify-best-model-config.py \
-	# 	--task heat-rejection \
-	# 	--hyperopt-dir /tmp/ray_storage/hyperopt/task-heat-rejection
+	python3 scripts/hyperopt.py \
+		--task heat-rejection \
+		--data-dir data/task-heat-rejection \
+		--log-dir $(RESULTS_DIR)/hyperopt/task-heat-rejection
+	python3 scripts/identify-best-model-configuration.py \
+		--task heat-rejection \
+		--hyperopt-dir $(RESULTS_DIR)/hyperopt/task-heat-rejection
 
 	# WM
 	python3 scripts/hyperopt.py \
 		--task WM \
-		--data-dir /data2/xai-brain-decoding-benchmark/data/task-WM \
-		--log-dir /tmp/ray_storage//hyperopt/task-WM
-	python3 scripts/identify-best-model-config.py \
+		--data-dir data/task-WM \
+		--log-dir results/hyperopt/task-WM
+	python3 scripts/identify-best-model-configuration.py \
 		--task WM \
-		--hyperopt-dir /tmp/ray_storage//hyperopt/task-WM
+		--hyperopt-dir results/hyperopt/task-WM
 
 	# MOTOR
 	python3 scripts/hyperopt.py \
 		--task MOTOR \
-		--data-dir /data2/xai-brain-decoding-benchmark/data/task-MOTOR \
-		--log-dir /tmp/ray_storage//hyperopt/task-MOTOR
-	python3 scripts/identify-best-model-config.py \
+		--data-dir data/task-MOTOR \
+		--log-dir results/hyperopt/task-MOTOR
+	python3 scripts/identify-best-model-configuration.py \
 		--task MOTOR \
-		--hyperopt-dir /tmp/ray_storage/hyperopt/task-MOTOR
+		--hyperopt-dir results/hyperopt/task-MOTOR
 
 # TRAIN best-performing model configurations
 results/models: scripts/train.py
 	# heat-rejection
 	python3 scripts/train.py \
 		--task heat-rejection \
-		--data-dir /data2/xai-brain-decoding-benchmark/data/task-heat-rejection \
+		--data-dir /Users/poldrack/Dropbox/code/xai-brain-decoding-benchmark/data/task-heat-rejection \
 		--num-runs 10 \
 		--num-folds 1 \
 		--model-config results/hyperopt/task-heat-rejection/best_model_config.json \
@@ -65,7 +94,7 @@ results/models: scripts/train.py
 	# WM
 	python3 scripts/train.py \
 		--task WM \
-		--data-dir /data2/xai-brain-decoding-benchmark/data/task-WM \
+		--data-dir data/task-WM \
 		--num-runs 10 \
 		--num-folds 1 \
 		--model-config results/hyperopt/task-WM/best_model_config.json \
@@ -75,7 +104,7 @@ results/models: scripts/train.py
 	# MOTOR
 	python3 scripts/train.py \
 		--task MOTOR \
-		--data-dir /data2/xai-brain-decoding-benchmark/data/task-MOTOR \
+		--data-dir data/task-MOTOR \
 		--num-runs 10 \
 		--num-folds 1 \
 		--model-config results/hyperopt/task-MOTOR/best_model_config.json \
