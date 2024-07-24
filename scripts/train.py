@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 import json
 import torch
-# import wandb
-# from ray import tune
+#import wandb
+from ray import tune
 sys.path.append('./')
 import src
 
@@ -46,7 +46,6 @@ def train(config: Dict=None) -> None:
 
     torch.manual_seed(config["seed"])
     np.random.seed(config["seed"])
-
     train_images, train_labels = load_train_data(config=config)
 
     train_history = []
@@ -165,12 +164,10 @@ def train(config: Dict=None) -> None:
 
 def load_train_data(config: Dict):
     """Loads training data, given config."""
-
     train_test_split_path = os.path.join(
         config["data_dir"],
         'train_test_split.json'
     )
-
     if not os.path.isfile(train_test_split_path):
         print('Creating train-test split...')
         subjects = np.unique(
@@ -189,6 +186,7 @@ def load_train_data(config: Dict):
                 if s not in test_subjects
             ]
         )
+        print(f'getting data {config["data_dir"]}')
         train_image_paths = src.data.get_subject_trial_image_paths(
             path=config["data_dir"],
             subjects=train_subjects,
@@ -212,7 +210,6 @@ def load_train_data(config: Dict):
         print(f'Loading train-test split from {train_test_split_path}...')
         with open(train_test_split_path, 'r') as f:
             train_test_split = json.load(f)
-
     train_images, train_labels = src.data.load_data(
         image_paths=train_test_split['train'],
         return_fdata=True,
@@ -803,7 +800,7 @@ def get_train_argparse(parser: argparse.ArgumentParser=None) -> argparse.Argumen
     parser.add_argument(
         '--verbose',
         metavar='BOOL',
-        default='True',
+        default='False',
         choices=('True', 'False'),
         type=str,
         required=False,

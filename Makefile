@@ -115,16 +115,16 @@ results/models: scripts/train.py
 	python3 scripts/fig_decoding-performance.py
 
 # GLM for BOLD data
-results/glm/BOLD: scripts/glm-BOLD_subject-level.py scripts/glm-BOLD_group-level.py
+run_glm_bold: # results/glm/BOLD: scripts/glm-BOLD_subject-level.py scripts/glm-BOLD_group-level.py
 	# heat-rejection
-	python3 scripts/glm-BOLD_subject-level.py \
-		--task heat-rejection \
-		--data-dir data/task-heat-rejection \
-		--subject-level-maps-dir results/glm/BOLD/task-heat-rejection/subject_level
-	python3 scripts/glm-BOLD_group-level.py \
-		--task heat-rejection \
-		--subject-level-maps-dir results/glm/BOLD/task-heat-rejection/subject_level \
-		--group-level-maps-dir results/glm/BOLD/task-heat-rejection/group_level
+	# python3 scripts/glm-BOLD_subject-level.py \
+	# 	--task heat-rejection \
+	# 	--data-dir data/task-heat-rejection \
+	# 	--subject-level-maps-dir results/glm/BOLD/task-heat-rejection/subject_level
+	# python3 scripts/glm-BOLD_group-level.py \
+	# 	--task heat-rejection \
+	# 	--subject-level-maps-dir results/glm/BOLD/task-heat-rejection/subject_level \
+	# 	--group-level-maps-dir results/glm/BOLD/task-heat-rejection/group_level
 
 	# WM
 	python3 scripts/glm-BOLD_subject-level.py \
