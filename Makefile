@@ -19,7 +19,7 @@ train-heat:
 	python3 scripts/train.py \
 		--task heat-rejection \
 		--data-dir data/task-heat-rejection \
-		--num-runs 2 \
+		--num-runs 10 \
 		--num-folds 1 \
 		--model-config results/hyperopt/task-heat-rejection/best_model_config.json \
 		--run-group-name task-heat-rejection \
@@ -151,21 +151,21 @@ results/attributions: scripts/interpret.py
 	# heat-rejection
 	python3 scripts/interpret.py \
 		--task heat-rejection \
-		--fitted-model-dir results/models/task-heat-rejection_final-model-fits \
+		--fitted-model-dir results/models/task-heat-rejection/best_model_dir \
 		--data-dir data/task-heat-rejection \
 		--attributions-dir results/attributions/task-heat-rejection
 
 	# WM
 	python3 scripts/interpret.py \
 		--task WM \
-		--fitted-model-dir results/models/task-WM_final-model-fits \
+		--fitted-model-dir results/models/task-WM/best_model_dir \
 		--data-dir data/task-WM \
 		--attributions-dir results/attributions/task-WM
 
 	# MOTOR
 	python3 scripts/interpret.py \
 		--task MOTOR \
-		--fitted-model-dir results/models/task-MOTOR_final-model-fits \
+		--fitted-model-dir results/models/task-MOTOR/best_model_dir \
 		--data-dir data/task-MOTOR \
 		--attributions-dir results/attributions/task-MOTOR
 
